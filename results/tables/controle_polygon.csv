@@ -1,0 +1,2 @@
+symbole,debut,fin,minutes_communes,minutes_alpaca_seul,minutes_polygon_seul,ecart_de_prix_maximal_cents,ecart_de_prix_median_cents,prix_identiques_au_dixieme_de_cent,ecart_de_volume_moyen
+QQQ,2026-06-01,2026-06-30,8190,0,11685,0.010000000008858478,0.0,1.0,0.006573486616060813
