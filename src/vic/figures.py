@@ -122,10 +122,13 @@ def desaccords(table: pd.DataFrame, dossier: Path = FIGURES) -> dict:
 
     L'échelle est logarithmique : l'accord dépasse 96 % et le silence n'atteint pas un dixième de
     pour cent, si bien qu'une échelle ordinaire rendrait les deux petites barres invisibles.
+
+    La troisième barre porte le libellé de la catégorie que le code compte, celle où le flux IEX ne
+    prend pas position : il n'a rien vu, ou son prix vaut exactement sa moyenne.
     """
     fig, axe = _ouvrir(figsize=(8.5, 4.2))
     categories = [("part_accord", "même position"), ("part_contresens", "positions opposées"),
-                  ("part_silence", "IEX n'a rien vu")]
+                  ("part_silence", "IEX ne décide rien")]
     symboles = list(table["symbole"])
     largeur = 0.8 / len(symboles)
     rendus = {}

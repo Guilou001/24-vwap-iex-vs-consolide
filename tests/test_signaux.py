@@ -70,3 +70,106 @@ def test_les_quatre_versions_sont_bien_quatre(prepare):
     table = signaux.toutes_les_versions(prepare)
     assert len(table) == 4
     assert set(table["version"]) == set(signaux.VERSIONS)
+
+
+@pytest.fixture
+def croisement():
+    """Une séance dont le prix passe au-dessus puis au-dessous de sa moyenne pondérée.
+
+    Les quatre prix sont 10, 14, 6 et 10, à volume constant, donc la moyenne pondérée vaut 10, 12,
+    10 et 10. Le signe de la distance se lit de tête, 0, +1, -1 et 0, et il change deux fois : c'est
+    ce changement qui rend le décalage d'une minute visible dans le résultat.
+    """
+    import datetime as dt
+
+    import pandas as pd
+
+    debut = pd.Timestamp("2024-02-05 09:30", tz="America/New_York")
+    prix = [10.0, 14.0, 6.0, 10.0]
+    table = pd.DataFrame({
+        "local": [debut + pd.Timedelta(minutes=k) for k in range(4)],
+        "seance": [dt.date(2024, 2, 5)] * 4,
+        "cloture": prix,
+        "volume": [100] * 4,
+        "prix_moyen": prix,
+        "montant": [p * 100 for p in prix],
+    })
+    return vwap.preparer(donnees.apparier(table, table, depuis=dt.date(2024, 2, 5), attendues=4))
+
+
+def test_la_position_est_celle_decidee_a_la_minute_davant(croisement):
+    """Le contrôle qui casse dès que le décalage d'une minute disparaît ou change de longueur.
+
+    Le signe de la distance vaut 0, +1, -1 puis 0. La position tenue est donc ce signe repoussé
+    d'une minute, soit 0, 0, +1 puis -1. Sans décalage elle vaudrait 0, +1, -1 puis 0, ce qui
+    donnerait à la stratégie le prix de la minute qu'elle est en train de regarder.
+    """
+    tenue = signaux.positions(croisement, "prix_consolide", "moyenne_consolide")
+    assert list(tenue) == [0.0, 0.0, 1.0, -1.0]
+
+
+def test_le_rendement_sans_glissement_se_calcule_a_la_main(croisement):
+    """Les positions 0, 0, +1 puis -1 sur les rendements 0, +2/5, -4/7 puis +2/3.
+
+    Les deux minutes qui portent une position rapportent donc -4/7 puis -2/3, soit un capital
+    multiplié par 3/7 puis par 1/3, et le total ressort à 1/7 moins un.
+    """
+    resultat = signaux.rejouer(croisement, "prix_consolide", "moyenne_consolide", "test", 0.0)
+    assert resultat.rendement_total == pytest.approx(1 / 7 - 1.0)
+
+
+def test_le_glissement_est_facture_au_cent_pres(croisement):
+    """Un aller-retour coûte deux fois le glissement, et le compte se fait à la main.
+
+    Les changements de position valent 0, 0, 1 puis 2, et le glissement d'un cent se rapporte au
+    prix de la minute, 6 dollars puis 10. Le coût est donc de 0,01/6 à la troisième minute et de
+    0,02/10 à la quatrième. Un coût facturé de travers, moitié moins par exemple, se voit ici.
+    """
+    resultat = signaux.rejouer(croisement, "prix_consolide", "moyenne_consolide", "test", 1.0)
+    attendu = (1.0 - 4.0 / 7.0 - 0.01 / 6.0) * (1.0 - 2.0 / 3.0 - 0.02 / 10.0) - 1.0
+    assert resultat.rendement_total == pytest.approx(attendu)
+
+
+def test_les_changements_par_jour_comptent_les_allers_retours(croisement):
+    """Trois unités de position échangées sur une séance font 1,5 changement, pas 3.
+
+    Passer de 0 à +1 puis de +1 à -1 fait bouger la position de 1 puis de 2 unités. Un aller-retour
+    complet vaut deux unités, donc le compte de changements se divise par deux.
+    """
+    resultat = signaux.rejouer(croisement, "prix_consolide", "moyenne_consolide", "test", 0.0)
+    assert resultat.changements_par_jour == pytest.approx(3.0 / 2.0)
+
+
+def test_la_volatilite_est_annualisee_sur_les_minutes_de_seance(croisement):
+    """Une année compte 252 séances de 390 minutes, et non 252 minutes.
+
+    Prendre 252 au lieu de 252 x 390 diviserait toutes les volatilités publiées par 1,24 et
+    multiplierait d'autant les quatre ratios de Sharpe.
+    """
+    resultat = signaux.rejouer(croisement, "prix_consolide", "moyenne_consolide", "test", 0.0)
+    nets = [0.0, 0.0, -4.0 / 7.0, -2.0 / 3.0]
+    attendu = float(np.std(nets, ddof=1) * np.sqrt(252 * 390))
+    assert resultat.volatilite == pytest.approx(attendu)
+
+
+def test_les_quatre_parts_des_desaccords_somment_a_un(prepare):
+    """La première minute de séance ne décide rien : sans sa part, le lecteur perd 0,26 %."""
+    r = signaux.desaccords(prepare)
+    total = r["part_accord"] + r["part_silence"] + r["part_contresens"] + r["part_aucune_position"]
+    assert total == pytest.approx(1.0)
+
+
+def test_une_seance_entierement_muette_est_comptee_comme_telle(consolide, iex):
+    """Une journée sans aucune barre IEX est une panne, pas un retard de quelques minutes.
+
+    La première séance est retirée du flux IEX en entier. Le silence total passe alors à trois
+    minutes, dont deux viennent de cette panne et une seule du trou ordinaire de la seconde séance.
+    Sans la décomposition, les trois se liraient comme trois retards à l'ouverture.
+    """
+    amputee = iex[iex["seance"] != iex["seance"].min()]
+    prepare = vwap.preparer(donnees.apparier(consolide, amputee,
+                                             depuis=consolide["seance"].min(), attendues=4))
+    r = signaux.desaccords(prepare)
+    assert r["seances_entierement_muettes"] == 1
+    assert r["minutes_de_silence"] == 3
+    assert r["minutes_de_silence_hors_seances_muettes"] == 1

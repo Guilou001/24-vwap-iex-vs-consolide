@@ -112,22 +112,39 @@ def rejouer(table: pd.DataFrame, prix: str, moyenne: str, nom: str,
 def desaccords(table: pd.DataFrame) -> dict:
     """Sur combien de minutes les deux flux donnent des positions différentes.
 
-    Trois cas se distinguent, et ils ne coûtent pas la même chose. Le **silence** est la minute où
-    IEX n'a encore rien vu de la séance, donc ne décide rien. Le **contresens** est la minute où les
-    deux flux prennent des positions opposées, l'un acheteur et l'autre vendeur : c'est le cas qui
-    coûte deux fois le mouvement du marché. Le reste est l'accord.
+    Quatre cas se distinguent, et ils ne coûtent pas la même chose. Le **silence** est la minute où
+    IEX ne décide rien alors que le consolidé décide, soit qu'IEX n'ait encore rien vu de la séance,
+    soit que son prix tombe exactement sur sa moyenne. Les deux motifs se comptent ensemble, et le
+    second est rare, mais nommer cette part « aveuglement » la décrirait mal. Le **contresens** est
+    la minute où les deux flux prennent des positions opposées, l'un acheteur et l'autre vendeur :
+    c'est le cas qui coûte deux fois le mouvement du marché. L'**accord** est le reste des minutes
+    décidables. Le quatrième cas est la première minute de chaque séance, où la moyenne pondérée n'a
+    qu'une observation et vaut le prix, si bien qu'aucun des deux flux ne prend position. Les quatre parts
+    somment à un, faute de quoi le lecteur qui additionne les trois premières tomberait sur 99,74 %
+    sans savoir où sont passées les 0,26 % restantes.
+
+    Le silence se décompose à son tour. Un retard de quelques minutes à l'ouverture et une séance
+    entière sans aucune barre donnent la même part de minutes muettes, et ne disent pas du tout la
+    même chose à qui veut dimensionner le risque d'un flux gratuit.
     """
     ref = positions(table, "prix_consolide", "moyenne_consolide")
     autre = positions(table, "prix_iex", "moyenne_iex")
     silence = (autre == 0) & (ref != 0)
     contresens = (ref * autre) < 0
     accord = (ref == autre) & (ref != 0)
+    aucune = ref == 0
     marche = rendements_du_marche(table)
+    vues_par_seance = table.groupby("seance")["presente_iex"].transform("sum")
+    seance_muette = vues_par_seance == 0
     return {
         "minutes": int(len(table)),
         "part_accord": float(accord.mean()),
         "part_silence": float(silence.mean()),
         "part_contresens": float(contresens.mean()),
+        "part_aucune_position": float(aucune.mean()),
+        "minutes_de_silence": int(silence.sum()),
+        "seances_entierement_muettes": int(table.loc[seance_muette, "seance"].nunique()),
+        "minutes_de_silence_hors_seances_muettes": int((silence & ~seance_muette).sum()),
         "cout_du_contresens": float((autre - ref)[contresens].mul(marche[contresens]).sum()),
         "cout_du_silence": float((autre - ref)[silence].mul(marche[silence]).sum()),
     }

@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from . import controle, couverture, divergence, signaux, vwap
-from .donnees import CACHE, DEBUT_IEX, SYMBOLES, apparier, lire
+from .donnees import CACHE, DEBUT_IEX, FERMETURE, OUVERTURE, SYMBOLES, apparier, lire
 
 TABLES = Path("results/tables")
 GLISSEMENTS = (0.0, 0.25, 0.5, 1.0)
@@ -34,6 +34,8 @@ def etude_couverture(tables: dict[str, pd.DataFrame], dossier: Path = TABLES) ->
     _ecrire(globale, "couverture", dossier)
     _ecrire(pd.concat([couverture.par_annee(t).assign(symbole=s) for s, t in tables.items()]),
             "couverture_par_annee", dossier)
+    _ecrire(pd.concat([couverture.par_mois(t).assign(symbole=s) for s, t in tables.items()]),
+            "couverture_par_mois", dossier)
     _ecrire(pd.concat([couverture.par_demi_heure(t).assign(symbole=s) for s, t in tables.items()]),
             "couverture_par_demi_heure", dossier)
     return globale
@@ -78,6 +80,11 @@ def etude_controle(symbole: str = "QQQ", cache: Path = CACHE,
     Polygon ne garde que deux ans glissants sur son offre gratuite : le contrôle porte donc sur le
     dernier mois disponible, ce qui suffit à trancher entre « les deux agrégateurs voient le même
     marché » et « ils ne le voient pas ».
+
+    Les deux séries sont coupées sur la même fenêtre horaire avant d'être confrontées. Polygon
+    publie aussi les extensions d'avant et d'après-bourse, qu'Alpaca a déjà perdues au chargement :
+    sans cette coupe, les 11 685 barres hors séance de juin 2026 se compteraient comme des minutes
+    manquées par Alpaca, ce qui décrirait un trou de couverture qui n'existe pas.
     """
     fichiers = sorted(cache.glob(f"polygon_{symbole}_1Min_*.parquet"))
     if not fichiers:
@@ -85,6 +92,8 @@ def etude_controle(symbole: str = "QQQ", cache: Path = CACHE,
             f"aucune barre Polygon en cache pour {symbole}. Lancer « vic fetch --controle ».")
     polygon = pd.concat([pd.read_parquet(f) for f in fichiers], ignore_index=True)
     polygon["local"] = polygon["horodatage"].dt.tz_convert("America/New_York")
+    heure = polygon["local"].dt.time
+    polygon = polygon.loc[(heure >= OUVERTURE) & (heure < FERMETURE)].copy()
     alpaca = lire(symbole, "sip", cache)
     debut, fin = polygon["local"].min(), polygon["local"].max()
     alpaca = alpaca[(alpaca["local"] >= debut) & (alpaca["local"] <= fin)]

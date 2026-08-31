@@ -64,7 +64,7 @@ def test_l_ecart_en_points_de_base_suit_le_niveau_du_prix():
     assert ecarts["ecart_pb"].iloc[0] == pytest.approx(2 * ecarts["ecart_pb"].iloc[1], rel=1e-3)
 
 
-def test_l_echelle_compare_l_ecart_a_ce_que_le_signal_mesure(consolide, iex):
+def test_l_echelle_compare_l_ecart_a_ce_que_le_signal_mesure(consolide):
     """Un écart nul ne peut jamais faire basculer une décision, quelle que soit la distance."""
     from vic import divergence
 
@@ -72,4 +72,4 @@ def test_l_echelle_compare_l_ecart_a_ce_que_le_signal_mesure(consolide, iex):
     resultat = divergence.echelle(vwap.preparer(apparie))
     assert resultat["ecart_median_pb"] == pytest.approx(0.0)
     assert resultat["part_ou_l_ecart_depasse_la_distance"] == pytest.approx(0.0)
-    assert bool(iex is not None)
+    assert resultat["part_qui_renverse_le_signe"] == pytest.approx(0.0)

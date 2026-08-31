@@ -1,3 +1,3 @@
-symbole,seances,minutes,part_du_volume,part_des_minutes,minutes_muettes,retard_median_minutes,retard_pire_minutes
-QQQ,1514,590460,0.013710924957709286,0.9186176879043457,48053,0.0,1.0
-SPY,1512,589680,0.019451170065245483,0.9817816442816443,10743,0.0,0.0
+symbole,seances,minutes,part_du_volume,part_des_minutes,minutes_muettes,seances_sans_aucune_barre,seances_avec_retard_mesurable,retard_median_minutes,retard_pire_minutes
+QQQ,1514,590460,0.013710924957709286,0.9186176879043457,48053,1,1513,0.0,1.0
+SPY,1512,589680,0.019451170065245483,0.9817816442816443,10743,1,1511,0.0,0.0

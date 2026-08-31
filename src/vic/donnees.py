@@ -3,7 +3,7 @@
 **Les deux flux, en mots simples.** Une action américaine ne s'échange pas à un seul endroit. Une
 transaction peut se faire sur seize bourses différentes et sur une trentaine de systèmes privés, et
 toutes remontent à un agrégateur officiel appelé le **flux consolidé**, qui est ce que voient les
-pupitres. IEX est **une** de ces bourses, la plus petite de celles qui publient gratuitement, et
+pupitres. IEX est une de ces bourses, la plus petite de celles qui publient gratuitement, et
 c'est celle que les fournisseurs de données offrent sans abonnement.
 
 **Ce que cela change pour une grille de minutes.** Le flux consolidé publie une barre pour chaque
@@ -74,6 +74,12 @@ def seances_completes(consolide: pd.DataFrame, attendues: int = BARRES_ATTENDUES
     Les séances écourtées de veille de congé sont retirées : elles ferment à 13 h, si bien que leur
     prix moyen pondéré porte sur trois heures et demie au lieu de six et demie, et les mêler aux
     autres fausserait toute moyenne par séance.
+
+    Le filtre est plus large que son motif, et c'est mesuré. Sur la fenêtre du dépôt il retire 12
+    séances sur QQQ, toutes des veilles de congé, mais 14 sur SPY, dont deux séances ordinaires où
+    le flux consolidé lui-même a manqué quelques minutes, le 2021-05-05 avec 385 barres et le
+    2023-06-05 avec 386. Sur un titre moins traité, la même règle écarterait des dizaines de séances
+    normales sans rien signaler.
 
     Le compte attendu est un argument et non une constante figée : les tests travaillent sur des
     séances de quatre minutes, et une constante en dur les obligerait à fabriquer 390 barres pour

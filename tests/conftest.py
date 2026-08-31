@@ -37,9 +37,8 @@ def consolide() -> pd.DataFrame:
 @pytest.fixture
 def iex(consolide: pd.DataFrame) -> pd.DataFrame:
     """Le même marché vu par une bourse qui rate la deuxième minute de chaque séance."""
-    garde = consolide["local"].dt.minute % 4 != 31 % 4
     reduit = consolide[consolide.index % 4 != 1].copy()
     reduit["volume"] = 10
     reduit["montant"] = reduit["prix_moyen"] * reduit["volume"]
-    assert bool(garde.any())
+    assert len(reduit) == 6
     return reduit.reset_index(drop=True)

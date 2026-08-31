@@ -80,16 +80,28 @@ def echelle(table: pd.DataFrame) -> dict:
     signe de cette distance que la règle regarde. Un écart dix fois plus petit qu'elle ne change
     presque jamais le signe ; un écart du même ordre le change une fois sur deux.
 
-    La dernière ligne est la mesure directe : la part des minutes où l'écart entre les deux moyennes
-    dépasse la distance elle-même, donc où il suffirait à faire basculer la décision.
+    Les deux dernières lignes ne mesurent pas la même chose, et les confondre double le résultat.
+    Dépasser la distance est une condition **nécessaire** pour que la décision bascule, jamais
+    suffisante : le signe ne change que si l'écart pousse du même côté que la distance. La part qui
+    renverse effectivement le signe est donc mesurée à part, en comparant les deux décisions.
+
+    Les deux médianes portent sur les mêmes minutes, celles où la moyenne d'IEX existe. Prendre la
+    distance sur toutes les minutes et l'écart sur les seules minutes lisibles ferait porter le
+    rapport sur deux populations différentes, ce qui deviendrait franchement trompeur sur un titre
+    où IEX se tait souvent.
     """
-    distance = (table["prix_consolide"] - table["moyenne_consolide"]).abs()
-    ecart = (table["moyenne_iex"] - table["moyenne_consolide"]).abs()
-    lisible = ecart.notna()
+    distance = table["prix_consolide"] - table["moyenne_consolide"]
+    ecart = table["moyenne_iex"] - table["moyenne_consolide"]
+    lisible = ecart.notna() & distance.notna()
     niveau = table["moyenne_consolide"]
+    d = (distance.abs() / niveau)[lisible]
+    e = (ecart.abs() / niveau)[lisible]
+    renverse = (np.sign(distance) != np.sign(table["prix_consolide"] - table["moyenne_iex"]))[lisible]
     return {
-        "distance_mediane_pb": float(10_000.0 * (distance / niveau).median()),
-        "ecart_median_pb": float(10_000.0 * (ecart / niveau)[lisible].median()),
-        "rapport": float((ecart / niveau)[lisible].median() / (distance / niveau).median()),
-        "part_ou_l_ecart_depasse_la_distance": float((ecart[lisible] > distance[lisible]).mean()),
+        "distance_mediane_pb": float(10_000.0 * d.median()),
+        "ecart_median_pb": float(10_000.0 * e.median()),
+        "rapport": float(e.median() / d.median()),
+        "part_ou_l_ecart_depasse_la_distance": float(
+            (ecart.abs()[lisible] > distance.abs()[lisible]).mean()),
+        "part_qui_renverse_le_signe": float(renverse.mean()),
     }

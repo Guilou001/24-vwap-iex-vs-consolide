@@ -48,3 +48,27 @@ def test_le_controle_refuse_des_fenetres_disjointes(consolide):
     decale["local"] = decale["local"] + pd.Timedelta(days=400)
     with pytest.raises(ValueError):
         controle.confronter(consolide, decale)
+
+
+def test_la_couverture_mensuelle_partage_les_seances_par_mois(prepare):
+    """Les deux séances fabriquées tombent en janvier 2024, donc un seul mois de deux séances."""
+    table = couverture.par_mois(prepare)
+    assert list(table["mois"]) == ["2024-01"]
+    assert int(table["seances"].iloc[0]) == 2
+    assert table["part_des_minutes"].iloc[0] == pytest.approx(6 / 8)
+
+
+def test_une_seance_sans_aucune_barre_iex_est_comptee_a_part(consolide, iex):
+    """Sans ce compte, une journée de panne se cacherait derrière un retard maximal d'une minute.
+
+    Le retard se mesure sur les séances où IEX finit par voir quelque chose. Une séance entièrement
+    muette n'a pas de retard, elle a une absence, et la soustraction qui les confondait rendait un
+    maximum d'une minute là où le flux se taisait toute la journée.
+    """
+    amputee = iex[iex["seance"] != iex["seance"].min()]
+    prepare = vwap.preparer(donnees.apparier(consolide, amputee,
+                                             depuis=consolide["seance"].min(), attendues=4))
+    r = couverture.globale(prepare)
+    assert r["seances_sans_aucune_barre"] == 1
+    assert r["seances_avec_retard_mesurable"] == 1
+    assert r["retard_pire_minutes"] == pytest.approx(0.0)

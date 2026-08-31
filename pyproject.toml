@@ -1,7 +1,7 @@
 [project]
 name = "vic"
 version = "1.0.0"
-description = "Le VWAP calculé sur IEX contre celui du flux consolidé : ce que 1,8 % du volume fait dire à un signal"
+description = "Le VWAP calculé sur IEX contre celui du flux consolidé : ce que 1,4 % du volume fait dire à un signal"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }

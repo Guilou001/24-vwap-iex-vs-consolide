@@ -16,20 +16,31 @@ import pandas as pd
 
 
 def globale(table: pd.DataFrame) -> dict:
-    """Les deux parts sur toute la fenêtre, plus le retard à la première transaction."""
+    """Les deux parts sur toute la fenêtre, plus le retard à la première transaction.
+
+    Deux régimes de défaillance se comptent séparément, parce qu'ils ne se soignent pas de la même
+    façon. Le **retard** est le nombre de minutes qu'IEX met à voir sa première transaction du jour,
+    et il ne se mesure que sur les séances où il finit par en voir une. La **séance entièrement
+    muette** est le jour où IEX ne publie aucune barre : elle n'a pas de retard, elle a une absence,
+    et la confondre avec un retard donnerait un maximum faussement rassurant.
+    """
     total_c = float(table["volume_consolide"].sum())
     total_i = float(table["volume_iex"].fillna(0.0).sum())
     minutes = len(table)
     presentes = int(table["presente_iex"].sum())
+    ouvertures = table.groupby("seance")["local"].min()
+    vues = table[table["presente_iex"]].groupby("seance")["local"].min()
+    muettes = ouvertures.index.difference(vues.index)
     # sur combien de minutes après l'ouverture IEX voit sa première transaction de la séance
-    premiere = (table[table["presente_iex"]].groupby("seance")["local"].min()
-                - table.groupby("seance")["local"].min())
+    premiere = vues - ouvertures.loc[vues.index]
     return {
         "seances": int(table["seance"].nunique()),
         "minutes": minutes,
         "part_du_volume": total_i / total_c,
         "part_des_minutes": presentes / minutes,
         "minutes_muettes": minutes - presentes,
+        "seances_sans_aucune_barre": int(len(muettes)),
+        "seances_avec_retard_mesurable": int(len(premiere)),
         "retard_median_minutes": float(premiere.dt.total_seconds().median() / 60.0),
         "retard_pire_minutes": float(premiere.dt.total_seconds().max() / 60.0),
     }
@@ -45,6 +56,28 @@ def par_annee(table: pd.DataFrame) -> pd.DataFrame:
             "annee": int(annee),
             "seances": int(bloc["seance"].nunique()),
             "part_du_volume": float(bloc["volume_iex"].fillna(0.0).sum()) / total_c,
+            "part_des_minutes": float(bloc["presente_iex"].mean()),
+        })
+    return pd.DataFrame(lignes)
+
+
+def par_mois(table: pd.DataFrame) -> pd.DataFrame:
+    """Les mêmes parts mois par mois.
+
+    L'année est une maille trop grosse pour une part qui bouge. Le mois permet de confronter une
+    mesure faite sur un mois isolé, celle du contrôle Polygon par exemple, à la mesure de la fenêtre
+    entière, sans avoir à refaire le calcul à la main.
+    """
+    mois = pd.Series([f"{d.year:04d}-{d.month:02d}" for d in table["seance"]],
+                     index=table.index, name="mois")
+    lignes = []
+    for etiquette, bloc in table.groupby(mois):
+        lignes.append({
+            "mois": str(etiquette),
+            "seances": int(bloc["seance"].nunique()),
+            "minutes": int(len(bloc)),
+            "part_du_volume": float(bloc["volume_iex"].fillna(0.0).sum())
+            / float(bloc["volume_consolide"].sum()),
             "part_des_minutes": float(bloc["presente_iex"].mean()),
         })
     return pd.DataFrame(lignes)
