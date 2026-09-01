@@ -119,9 +119,9 @@ le reste de ce dépôt mesure le problème sur toute la fenêtre.
 ![La part du volume et la part des minutes, année par année](results/figures/couverture.png)
 
 Comment lire cette figure : deux volets, parce que les deux grandeurs n'ont ni la même échelle ni le
-même sens et que les superposer suggérerait une relation que rien n'établit. Le volet de droite est
-celui qui descend en 2021 et en 2024, ce qui se voit mal dans une moyenne d'ensemble. Les années 2020
-et 2026 sont partielles, 104 et 165 séances contre 247 à 251 pour les autres.
+même sens et que les superposer suggérerait une relation que rien n'établit. Le volet de droite
+retombe en 2021, en 2023 et en 2024 sur QQQ, ce qui se voit mal dans une moyenne d'ensemble. Les
+années 2020 et 2026 sont partielles, 104 et 165 séances contre 247 à 251 pour les autres.
 
 ### 4.2 L'écart entre les deux moyennes, et ce à quoi il faut le comparer
 
@@ -197,7 +197,9 @@ suivi de tendance décide de solder.
 
 Le signal est celui du dépôt 21 : acheter quand le prix est au-dessus de sa moyenne pondérée depuis
 l'ouverture, vendre à découvert sinon, solder à la clôture. Le rendement encaissé est toujours celui
-du vrai marché, quel que soit le flux qui décide.
+du vrai marché, quel que soit le flux qui décide. La dernière colonne compte les changements de
+position par jour, un renversement complet d'acheteur à vendeur comptant pour un et un simple retour
+à plat pour un demi.
 
 | Symbole | Version | Rendement total | Par an | Sharpe | Pire creux | Changements par jour |
 |---|---|---:|---:|---:|---:|---:|
@@ -243,7 +245,7 @@ décidée la minute précédente. Ce tableau donne des fréquences. Le coût som
 est dans `results/tables/desaccords.csv`, non composé, donc il ne se retranche pas des rendements de
 la section précédente.
 
-Ce cas n'est d'ailleurs pas ce qu'il paraît. Il vaut 394 minutes sur QQQ et 391 sur SPY, dont
+Le silence n'est d'ailleurs pas ce qu'il paraît. Il vaut 394 minutes sur QQQ et 391 sur SPY, dont
 **389 sur la seule séance du 2025-03-10**, celle où IEX ne publie aucune barre. Hors ce jour-là, il
 en reste 5 sur QQQ et 2 sur SPY en six ans. Le mode de défaillance mesuré est donc la panne d'une
 séance entière, et non le retard de quelques minutes à l'ouverture qu'un lecteur imaginerait.

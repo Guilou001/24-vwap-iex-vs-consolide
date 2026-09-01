@@ -3,8 +3,8 @@
 **Les deux flux, en mots simples.** Une action américaine ne s'échange pas à un seul endroit. Une
 transaction peut se faire sur seize bourses différentes et sur une trentaine de systèmes privés, et
 toutes remontent à un agrégateur officiel appelé le **flux consolidé**, qui est ce que voient les
-pupitres. IEX est une de ces bourses, la plus petite de celles qui publient gratuitement, et
-c'est celle que les fournisseurs de données offrent sans abonnement.
+pupitres. IEX est une de ces bourses, et c'est celle que les fournisseurs de données offrent sans
+abonnement.
 
 **Ce que cela change pour une grille de minutes.** Le flux consolidé publie une barre pour chaque
 minute où le titre s'est échangé quelque part, ce qui, sur un fonds très liquide, veut dire toutes

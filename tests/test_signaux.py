@@ -21,16 +21,46 @@ def test_la_position_vient_de_la_minute_precedente(prepare):
         assert tenue[i] == 0.0
 
 
-def test_le_prix_egale_sa_propre_moyenne_a_la_premiere_minute(prepare):
-    """La comparaison de 9 h 31 tombe à zéro : la position ne se prend qu'à 9 h 32.
+@pytest.fixture
+def premiere_minute_decidable():
+    """Une séance dont le prix moyen de chaque barre diffère de sa clôture, comme sur le vrai marché.
 
-    Ce n'est pas un défaut du code, c'est une propriété de la définition : à la première minute la
-    moyenne pondérée n'a qu'une observation, donc elle vaut le prix lui-même.
+    Les clôtures valent 10, 11, 12 et 13, les prix moyens 9,50, 10,50, 11,50 et 12,50. La moyenne
+    pondérée de la première minute vaut donc 9,50 et non 10 : c'est le prix moyen de la barre, jamais
+    sa clôture. Le gabarit ordinaire du dépôt pose les deux égaux, si bien qu'il ne peut pas voir la
+    différence.
     """
-    signal = np.sign(prepare["prix_consolide"] - prepare["moyenne_consolide"])
-    premieres = prepare.groupby("seance").head(1).index
-    for i in premieres:
-        assert signal[i] == 0.0
+    import datetime as dt
+
+    import pandas as pd
+
+    debut = pd.Timestamp("2024-02-05 09:30", tz="America/New_York")
+    cloture = [10.0, 11.0, 12.0, 13.0]
+    prix_moyen = [9.5, 10.5, 11.5, 12.5]
+    table = pd.DataFrame({
+        "local": [debut + pd.Timedelta(minutes=k) for k in range(4)],
+        "seance": [dt.date(2024, 2, 5)] * 4,
+        "cloture": cloture,
+        "volume": [100] * 4,
+        "prix_moyen": prix_moyen,
+        "montant": [p * 100 for p in prix_moyen],
+    })
+    return vwap.preparer(donnees.apparier(table, table, depuis=dt.date(2024, 2, 5), attendues=4))
+
+
+def test_la_premiere_minute_compare_deux_grandeurs_differentes(premiere_minute_decidable):
+    """Le prix n'égale pas sa propre moyenne pondérée à la première minute, et le décalage suffit.
+
+    La moyenne pondérée de la première minute est le prix moyen de la barre, 9,50, quand le signal
+    compare la clôture, 10. La comparaison rend donc +1 et non 0. Si la position reste nulle, c'est
+    parce que la minute t décide de la minute t+1 et qu'aucune minute ne précède l'ouverture.
+    """
+    signal = np.sign(premiere_minute_decidable["prix_consolide"]
+                     - premiere_minute_decidable["moyenne_consolide"])
+    tenue = signaux.positions(premiere_minute_decidable, "prix_consolide", "moyenne_consolide")
+    assert premiere_minute_decidable["moyenne_consolide"].iloc[0] == pytest.approx(9.5)
+    assert signal.iloc[0] == 1.0
+    assert tenue.iloc[0] == 0.0
 
 
 def test_une_tendance_qui_monte_donne_une_position_acheteuse(prepare):

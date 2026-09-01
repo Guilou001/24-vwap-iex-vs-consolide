@@ -38,9 +38,10 @@ def positions(table: pd.DataFrame, prix: str, moyenne: str) -> pd.Series:
     fin de la minute t décide de la position tenue pendant la minute t+1. Sans lui, la stratégie
     achèterait au prix qu'elle vient d'observer, et tous les chiffres seraient faux.
 
-    Une comparaison impossible, faute de prix ou de moyenne, laisse la position à zéro. Une
-    comparaison qui tombe exactement à égalité aussi : c'est le cas de la première minute, où la
-    moyenne pondérée n'a qu'une observation et vaut donc le prix lui-même.
+    Une comparaison impossible, faute de prix ou de moyenne, laisse la position à zéro, et une
+    comparaison qui tombe exactement à égalité aussi. La première minute d'une séance ne porte
+    jamais de position, non par égalité du prix et de sa moyenne, qui n'a rien d'acquis, mais parce
+    qu'aucune minute ne la précède et que le décalage n'a donc rien à reporter.
     """
     signal = np.sign(table[prix] - table[moyenne])
     signal = pd.Series(signal, index=table.index).fillna(0.0)
@@ -118,10 +119,10 @@ def desaccords(table: pd.DataFrame) -> dict:
     second est rare, mais nommer cette part « aveuglement » la décrirait mal. Le **contresens** est
     la minute où les deux flux prennent des positions opposées, l'un acheteur et l'autre vendeur :
     c'est le cas qui coûte deux fois le mouvement du marché. L'**accord** est le reste des minutes
-    décidables. Le quatrième cas est la première minute de chaque séance, où la moyenne pondérée n'a
-    qu'une observation et vaut le prix, si bien qu'aucun des deux flux ne prend position. Les quatre parts
-    somment à un, faute de quoi le lecteur qui additionne les trois premières tomberait sur 99,74 %
-    sans savoir où sont passées les 0,26 % restantes.
+    décidables. Le quatrième cas est la première minute de chaque séance, qu'aucune minute ne
+    précède, si bien qu'aucun des deux flux n'y tient de position. Les quatre parts somment à un,
+    faute de quoi le lecteur qui additionne les trois premières tomberait sur 99,74 % sans savoir
+    où sont passées les 0,26 % restantes.
 
     Le silence se décompose à son tour. Un retard de quelques minutes à l'ouverture et une séance
     entière sans aucune barre donnent la même part de minutes muettes, et ne disent pas du tout la

@@ -68,8 +68,17 @@ def etude_signaux(tables: dict[str, pd.DataFrame], dossier: Path = TABLES) -> pd
                 symbole=symbole, glissement_cents=g))
     resultat = pd.concat(morceaux, ignore_index=True)
     _ecrire(resultat, "signaux", dossier)
-    _ecrire(pd.DataFrame([{"symbole": s, **signaux.desaccords(t)} for s, t in tables.items()]),
-            "desaccords", dossier)
+    return resultat
+
+
+def etude_desaccords(tables: dict[str, pd.DataFrame], dossier: Path = TABLES) -> pd.DataFrame:
+    """Sur combien de minutes les deux flux tiennent des positions différentes.
+
+    Cette étude se sépare de la précédente parce qu'elle ne compare pas des rendements mais des
+    positions, minute par minute : c'est elle qui dit d'où vient l'écart que la précédente mesure.
+    """
+    resultat = pd.DataFrame([{"symbole": s, **signaux.desaccords(t)} for s, t in tables.items()])
+    _ecrire(resultat, "desaccords", dossier)
     return resultat
 
 
@@ -104,13 +113,21 @@ def etude_controle(symbole: str = "QQQ", cache: Path = CACHE,
     return resultat
 
 
-def tout(cache: Path = CACHE, dossier: Path = TABLES) -> dict[str, pd.DataFrame]:
-    """Les cinq études, dans l'ordre où elles se lisent."""
-    tables = {s: charger(s, cache) for s in SYMBOLES}
+def tout(cache: Path = CACHE, dossier: Path = TABLES,
+         tables: dict[str, pd.DataFrame] | None = None) -> dict[str, pd.DataFrame]:
+    """Les cinq études, dans l'ordre où elles se lisent.
+
+    Les tables appariées se passent en argument quand l'appelant les a déjà chargées. Les relire
+    est l'étape la plus lourde du dépôt, six années de barres d'une minute sur deux symboles et
+    deux flux, et rien n'oblige à la faire deux fois.
+    """
+    if tables is None:
+        tables = {s: charger(s, cache) for s in SYMBOLES}
     sortie = {
         "couverture": etude_couverture(tables, dossier),
         "divergence": etude_divergence(tables, dossier),
         "signaux": etude_signaux(tables, dossier),
+        "desaccords": etude_desaccords(tables, dossier),
     }
     try:
         sortie["controle"] = etude_controle("QQQ", cache, dossier)

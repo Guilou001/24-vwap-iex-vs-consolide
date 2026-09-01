@@ -45,9 +45,10 @@ def divergence():
 
 @app.command()
 def signal():
-    """Les quatre versions du signal du dépôt 21."""
+    """Les quatre versions du signal du dépôt 21, puis le compte des désaccords."""
     tables = {s: etudes.charger(s) for s in SYMBOLES}
     typer.echo(etudes.etude_signaux(tables).to_string(index=False))
+    typer.echo(etudes.etude_desaccords(tables).to_string(index=False))
 
 
 @app.command()
@@ -64,7 +65,7 @@ def tout():
     from . import vwap
 
     tables = {s: etudes.charger(s) for s in SYMBOLES}
-    for nom, table in etudes.tout().items():
+    for nom, table in etudes.tout(tables=tables).items():
         typer.echo(f"\n== {nom}\n{table.to_string(index=False)}")
 
     ecarts = {s: vwap.ecarts(t) for s, t in tables.items()}
