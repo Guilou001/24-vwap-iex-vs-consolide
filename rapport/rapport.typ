@@ -1,4 +1,4 @@
-#set document(title: "Le flux gratuit voit 1,4 % du marché : ce qu'il fait dire à un signal", author: "Guillaume Vaudescal")
+#set document(title: "Un flux gratuit suffit-il pour mesurer le prix moyen du marché ?", author: "Guillaume Vaudescal")
 #set page(
   paper: "a4",
   margin: (x: 2.2cm, y: 2.4cm),
@@ -30,22 +30,30 @@
 
 #align(center)[
   #block(width: 100%)[
-    #text(size: 18pt, weight: "bold")[Le flux gratuit voit 1,4 % du marché : ce qu'il fait dire à un signal]
+    #text(size: 18pt, weight: "bold")[Un flux gratuit suffit-il pour mesurer le prix moyen du marché ?]
     #v(0.6em)
-    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-08-31 · #link("https://github.com/Guilou001/24-vwap-iex-vs-consolide")[Guilou001/24-vwap-iex-vs-consolide]]
+    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-09-04 · #link("https://github.com/Guilou001/24-vwap-iex-vs-consolide")[Guilou001/24-vwap-iex-vs-consolide]]
   ]
 ]
 #v(1.2em)
 #line(length: 100%, stroke: 0.6pt + luma(190))
 #v(0.8em)
 
-Toute réplication à budget nul calcule le prix moyen pondéré par les volumes, la moyenne des prix payés depuis l'ouverture pondérée par les quantités échangées. Elle la calcule sur le flux d'IEX, la seule bourse américaine qui publie ses transactions sans abonnement. Les pupitres, eux, se réfèrent au flux consolidé, qui les voit toutes. Ce dépôt mesure de combien les deux moyennes s'écartent, puis rejoue le signal du dépôt 21 sur chacune.
+Une action américaine s'échange sur plusieurs bourses et systèmes privés. Le flux consolidé réunit ces transactions, tandis que le flux gratuit d'IEX n'en montre qu'une partie. Un prix instantané peut rester semblable d'un lieu à l'autre, mais une moyenne pondérée par les volumes dépend directement des transactions que le fournisseur a observées.
 
-*Résultat en une phrase.* IEX est présent à *91,9 %* des minutes de séance sur QQQ, donc les trous ne sont pas le problème. Mais il ne porte que *1,4 %* du volume, et sa moyenne pondérée s'écarte de la vraie de *9,6 cents en médiane*. La position tenue diverge donc *une minute sur vingt-neuf*, et le rendement du signal passe de *+339 % à +189 %* sur QQQ. Le même exercice sur SPY donne *+75 % contre +105 %*, soit l'écart en sens inverse : ce n'est pas un biais qu'on corrige, c'est du bruit qui flatte aussi souvent qu'il pénalise.
+Le présent projet compare les deux flux minute par minute sur QQQ et SPY entre août 2020 et août 2026. Il rejoue ensuite la stratégie du projet 21 avec chaque mesure afin de voir si le choix de la source change la décision de négocier.
+
+*Résultat principal.* IEX publie une barre dans 91,9 % des minutes de séance sur QQQ, mais il ne représente que 1,4 % du volume consolidé. Sa moyenne s'écarte de 9,6 cents en médiane et les deux flux recommandent des positions opposées pendant 3,4 % des minutes. Sur QQQ, le rendement total passe de 339 % à 189 % selon le flux. Sur SPY, il passe plutôt de 75 % à 105 %, ce qui montre un écart sans direction stable.
+
+Afin de comprendre cet effet, nous présenterons d'abord l'organisation des marchés et la différence entre un prix et une moyenne. Dans un deuxième temps, nous décrirons les deux flux et leur couverture réelle pendant les heures de séance. Ensuite, nous comparerons les moyennes, les positions et les rendements. Enfin, nous utiliserons Polygon comme contrôle indépendant et nous présenterons les limites de l'expérience.
+
+Le rapport détaillé est disponible en PDF : #link("rapport/rapport.pdf")[rapport/rapport.pdf].
+
+== Résumé en anglais
 
 _Summary in English. Every zero-budget replication computes VWAP on the IEX feed, the only US venue publishing trades for free. Over 1 514 sessions on QQQ and 1 512 on SPY, from August 2020 to August 2026, IEX carries 1.4 % of consolidated volume on QQQ but prints a bar in 91.9 % of session minutes, so sparsity is not the issue. Its running VWAP nevertheless sits a median 9.6 cents away from the consolidated one, exceeds one cent on 93.8 % of minutes, and exceeds the price-to-VWAP distance the signal actually measures on 5.3 % of minutes. Replaying the VWAP day-trading rule of repository 21 on each feed: 339 % versus 189 % total return on QQQ, but 75 % versus 105 % on SPY. The two feeds hold opposite positions on 3.4 % of minutes. On QQQ a four-way decomposition attributes more of the damage to the VWAP than to the price; on SPY the ordering does not hold. Polygon, an independent aggregator, reprices the consolidated feed identically to a hundredth of a cent, which rules out the provider as the source of the gap._
 
-== 1. La question posée
+== 1. La question en détail
 
 *Les deux flux, en mots simples.* Une action américaine ne s'échange pas à un seul endroit. Une transaction peut se faire sur seize bourses et sur une trentaine de systèmes privés, chiffres rapportés et non revérifiés ici. Toutes remontent à un agrégateur officiel, le *flux consolidé*, qui est ce que voient les pupitres. IEX est une de ces bourses, et c'est celle que les fournisseurs de données offrent sans abonnement.
 
